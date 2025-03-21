@@ -26,6 +26,7 @@
 
 # Visual Studio cache directory
 .vs/
+.vscode/
 
 # Gradle cache directory
 .gradle/
@@ -140,6 +141,8 @@ Temporary Items
 ### macOS Patch ###
 # iCloud generated files
 *.icloud
+# macOS system files
+.DS_Store
 
 ### Windows ###
 # Windows thumbnail cache files
