@@ -25,13 +25,12 @@ public class ShowCallRenderer : MonoBehaviour
     {
 
         renderPosition = Camera.main.WorldToScreenPoint(OtherPlayerPos.position); //get worldPosition of other player into a screen space format
-        Debug.Log(renderPosition);
+        //Debug.Log(renderPosition);
 
         //clamp it to the screen size so it's always visible
         renderPosition.x = Mathf.Clamp(renderPosition.x, 0, Screen.width); 
         renderPosition.y = Mathf.Clamp(renderPosition.y, 0, Screen.height);
 
-        /* commenting all to debug what EXACTLY is not working rn
 
         if (renderPosition.z < 0) //how do we display The Thing when its /behind/ the camera?
         {
@@ -72,6 +71,7 @@ public class ShowCallRenderer : MonoBehaviour
                     renderPosition.x = 0;
                 }
             }
+            */
            
         } 
         else { behindCamera = false; }
@@ -81,7 +81,7 @@ public class ShowCallRenderer : MonoBehaviour
         Indicator.position = renderPosition; 
 
         debugText.text = $"{Indicator.position.x}, {Indicator.position.y}, {Indicator.position.z}" + $"\n behind camera: {behindCamera}" + $"\n dist {distanceToMidpoint.x}";
-        */
+        
 
         debugText.text = renderPosition.x.ToString() + " " + renderPosition.y.ToString();
         
