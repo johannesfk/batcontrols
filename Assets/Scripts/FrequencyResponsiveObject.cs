@@ -9,7 +9,7 @@ public class FrequencyResponsiveObject : MonoBehaviour
 
     public Vector3 minScale = new Vector3(0.5f, 0.5f, 0.5f);  // Minimum size
     public Vector3 maxScale = new Vector3(3f, 3f, 3f);  // Maximum size
-    public float growthSpeed = 1f;  // Speed of growing/shrinking
+    public float growthSpeed = 0.5f;  // Speed of growing/shrinking
 
     private bool isGrowing = false;
     private bool isShrinking = false;

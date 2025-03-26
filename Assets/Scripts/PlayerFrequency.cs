@@ -6,9 +6,9 @@ public class PlayerFrequency : MonoBehaviour
     public bool isBluePlayer;
     public bool isUsingFrequency = false;  // Tracks if the ability is active
 
-    // Shared frequency range for both players
-    public static float frequencyRangeMin = 100f;
-    public static float frequencyRangeMax = 1000f;
+    public static float frequencyRangeMin = 0f;  // Shared minimum frequency
+    public static float frequencyRangeMax = 1000f; // Shared maximum frequency
+    public float frequencyStep = 10f; // Step size for increasing/decreasing frequency
 
     void Update()
     {
@@ -18,15 +18,38 @@ public class PlayerFrequency : MonoBehaviour
             isUsingFrequency = !isUsingFrequency;  // Toggle state
         }
 
-        // Update frequency if the ability is active
+        // Adjust frequency if the ability is active
         if (isUsingFrequency)
         {
-            // Adjust frequency within the shared range
-            currentFrequency = Mathf.Lerp(frequencyRangeMin, frequencyRangeMax, Input.GetAxis("Vertical"));
+            if (isBluePlayer)
+            {
+                // Increase/decrease frequency with W/S
+                if (Input.GetKey(KeyCode.W))
+                {
+                    currentFrequency += frequencyStep * Time.deltaTime * 10;
+                }
+                else if (Input.GetKey(KeyCode.S))
+                {
+                    currentFrequency -= frequencyStep * Time.deltaTime * 10;
+                }
+            }
+            else
+            {
+                // Increase/decrease frequency with keypad 8/2  
+                if (Input.GetKey(KeyCode.Keypad8))
+                {
+                    currentFrequency += frequencyStep * Time.deltaTime * 10;
+                }
+                else if (Input.GetKey(KeyCode.Keypad2))
+                {
+                    currentFrequency -= frequencyStep * Time.deltaTime * 10;
+                }
+            }
 
-            // Clamp the frequency to ensure it stays within the valid range
+            // Clamp frequency within allowed range
             currentFrequency = Mathf.Clamp(currentFrequency, frequencyRangeMin, frequencyRangeMax);
         }
     }
 }
+
 
