@@ -6,8 +6,8 @@ public class PlayerFrequency : MonoBehaviour
     public bool isBluePlayer;
     public bool isUsingFrequency = false;  // Tracks if the ability is active
 
-    public static float frequencyRangeMin = 0f;  // Shared minimum frequency
-    public static float frequencyRangeMax = 1000f; // Shared maximum frequency
+    public float frequencyRangeMin = 0f;
+    public float frequencyRangeMax = 1000f;
     public float frequencyStep = 10f; // Step size for increasing/decreasing frequency
 
     void Update()

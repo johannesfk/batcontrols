@@ -23,9 +23,11 @@ public class FrequencyResponsiveObject : MonoBehaviour
         PlayerFrequency blueFreq = bluePlayer.GetComponent<PlayerFrequency>();
         PlayerFrequency redFreq = redPlayer.GetComponent<PlayerFrequency>();
 
-        // Get the shared frequency range from PlayerFrequency
-        float frequencyRangeMin = PlayerFrequency.frequencyRangeMin;
-        float frequencyRangeMax = PlayerFrequency.frequencyRangeMax;
+        if (blueFreq == null || redFreq == null) return; // Prevent errors if references are missing
+
+        // Get the shared frequency range from an instance of PlayerFrequency
+        float frequencyRangeMin = blueFreq.frequencyRangeMin;
+        float frequencyRangeMax = blueFreq.frequencyRangeMax;
 
         // Sync frequencies for both players within the same range
         float blueFrequency = Mathf.Clamp(blueFreq.currentFrequency, frequencyRangeMin, frequencyRangeMax);
@@ -80,14 +82,24 @@ public class FrequencyResponsiveObject : MonoBehaviour
 
     void HandleGrowth()
     {
+        Vector3 targetScale = transform.localScale;
+
         if (isGrowing && transform.localScale.x < maxScale.x)
         {
-            transform.localScale = Vector3.MoveTowards(transform.localScale, maxScale, growthSpeed * Time.deltaTime);
+            targetScale = Vector3.MoveTowards(transform.localScale, maxScale, growthSpeed * Time.deltaTime);
         }
         else if (isShrinking && transform.localScale.x > minScale.x)
         {
-            transform.localScale = Vector3.MoveTowards(transform.localScale, minScale, growthSpeed * Time.deltaTime);
+            targetScale = Vector3.MoveTowards(transform.localScale, minScale, growthSpeed * Time.deltaTime);
         }
+
+        // Calculate growth difference
+        float scaleDifference = targetScale.y - transform.localScale.y;
+
+        // Apply new scale
+        transform.localScale = targetScale;
+
+        // Adjust position to keep the bottom on the ground
+        transform.position += new Vector3(0, scaleDifference / 2f, 0);
     }
 }
-
