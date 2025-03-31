@@ -6,9 +6,11 @@ public class PlayerAnimation : MonoBehaviour
     [SerializeField] private float locomotionBlendSpeed = 0.02f;
 
     private PlayerLocomotionInput _playerLocomotionInput;
+    private PlayerState _playerState;
 
     private static int inputXHash = Animator.StringToHash("inputX");
     private static int inputYHash = Animator.StringToHash("inputY");
+    private static int inputMagnitudeHash = Animator.StringToHash("inputMagnitude");
 
     private Vector3 _currentBlendInput = Vector3.zero;
 
@@ -19,6 +21,7 @@ public class PlayerAnimation : MonoBehaviour
     private void Awake()
     {
         _playerLocomotionInput = GetComponent<PlayerLocomotionInput>();
+        _playerState = GetComponent<PlayerState>();
     }
 
     private void Update()
@@ -28,10 +31,13 @@ public class PlayerAnimation : MonoBehaviour
 
     private void UpdateAnimationState()
     {
-        Vector2 inputTarget = _playerLocomotionInput.MovementInput;
+        bool isSprinting = _playerState.CurrentPlayerMovementState == PlayerMovementState.Sprinting;
+
+        Vector2 inputTarget = isSprinting ? _playerLocomotionInput.MovementInput * 1.5f : _playerLocomotionInput.MovementInput;
         _currentBlendInput = Vector3.Lerp(_currentBlendInput, inputTarget, locomotionBlendSpeed * Time.deltaTime);
 
         _animator.SetFloat(inputXHash, inputTarget.x);
         _animator.SetFloat(inputYHash, inputTarget.y);
+        _animator.SetFloat(inputMagnitudeHash, _currentBlendInput.magnitude);
     }
 }
