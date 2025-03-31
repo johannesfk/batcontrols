@@ -1,105 +1,205 @@
-using UnityEngine;
+    using UnityEngine;
+    using System.Collections;
+    using UnityEngine.Audio;
 
-public class FrequencyResponsiveObject : MonoBehaviour
-{
-    public float requiredFrequency;  // The target frequency for interaction
-    public float activationRange = 5f;  // How close the player needs to be
-    public Transform bluePlayer;
-    public Transform redPlayer;
-
-    public Vector3 minScale = new Vector3(0.5f, 0.5f, 0.5f);  // Minimum size
-    public Vector3 maxScale = new Vector3(3f, 3f, 3f);  // Maximum size
-    public float growthSpeed = 0.5f;  // Speed of growing/shrinking
-
-    private bool isGrowing = false;
-    private bool isShrinking = false;
-
-    private float lastBlueFrequency = -1f; // Store last logged frequency for Blue
-    private float lastRedFrequency = -1f;  // Store last logged frequency for Red
-
-    void Update()
+    [RequireComponent(typeof(AudioSource))]
+    public class FrequencyResponsiveObject : MonoBehaviour
     {
-        // Get frequency components for both blue and red players
-        PlayerFrequency blueFreq = bluePlayer.GetComponent<PlayerFrequency>();
-        PlayerFrequency redFreq = redPlayer.GetComponent<PlayerFrequency>();
+        [Header("Frequency Settings")]
+        public float requiredFrequency = 440f;  // Default to A4 note
+        public float frequencyTolerance = 10f;
+        public float activationRange = 5f;
 
-        if (blueFreq == null || redFreq == null) return; // Prevent errors if references are missing
+        [Header("Visual Settings")]
+        public Vector3 minScale = new Vector3(0.5f, 0.5f, 0.5f);
+        public Vector3 maxScale = new Vector3(3f, 3f, 3f);
+        public float growthSpeed = 0.5f;
 
-        // Get the shared frequency range from an instance of PlayerFrequency
-        float frequencyRangeMin = blueFreq.frequencyRangeMin;
-        float frequencyRangeMax = blueFreq.frequencyRangeMax;
+        public Transform bluePlayer;
+        public Transform redPlayer;
 
-        // Sync frequencies for both players within the same range
-        float blueFrequency = Mathf.Clamp(blueFreq.currentFrequency, frequencyRangeMin, frequencyRangeMax);
-        float redFrequency = Mathf.Clamp(redFreq.currentFrequency, frequencyRangeMin, frequencyRangeMax);
+        private bool isGrowing = false;
+        private bool isShrinking = false;
 
-        // Log only when the frequency changes
-        if (blueFreq.isUsingFrequency && Mathf.Abs(blueFrequency - lastBlueFrequency) > 0.1f)
+        [Header("Audio Settings")]
+        public float emissionVolume = 0.3f;
+        public float pitchVariation = 0.1f;
+        public float activeVolumeBoost = 1.5f;
+        public float smoothTime = 0.2f;
+        private AudioSource audioSource;
+        private float basePitch;
+        private float currentPitch;
+        private float targetVolume;
+        private float volumeVelocity;
+        private float pitchVelocity;
+
+        public AudioMixerGroup environmentMixerGroup; // Assign the "Environment" group
+
+        private float lastBlueFreq;
+        private float lastRedFreq;
+
+
+    void Start()
         {
-            Debug.Log($"Blue Player using frequency: {blueFrequency}");
-            lastBlueFrequency = blueFrequency;
+            audioSource = GetComponent<AudioSource>();
+            InitializeAudio();
         }
 
-        if (redFreq.isUsingFrequency && Mathf.Abs(redFrequency - lastRedFrequency) > 0.1f)
+        void InitializeAudio()
         {
-            Debug.Log($"Red Player using frequency: {redFrequency}");
-            lastRedFrequency = redFrequency;
+            audioSource.outputAudioMixerGroup = environmentMixerGroup;
+            audioSource.loop = true;
+            audioSource.volume = 0f; // Start silent
+            targetVolume = emissionVolume;
+            basePitch = Random.Range(0.95f, 1.05f);
+            currentPitch = basePitch;
+            audioSource.pitch = currentPitch;
+
+            // Generate and play the tone
+            AudioClip tone = GenerateSineWave(requiredFrequency, 10f); // 10 second clip
+            audioSource.clip = tone;
+            audioSource.Play();
+
+            // Fade in the audio
+            StartCoroutine(AudioFade(0f, emissionVolume, 2f));
         }
 
-        // Determine if the players can interact with the object
-        bool blueCanGrow = blueFreq.isUsingFrequency && IsPlayerInRange(bluePlayer) && Mathf.Abs(blueFrequency - requiredFrequency) < 10f;
-        bool redCanShrink = redFreq.isUsingFrequency && IsPlayerInRange(redPlayer) && Mathf.Abs(redFrequency - requiredFrequency) < 10f;
-
-        // If both players try to interact at the same time, cancel the effect
-        if (blueCanGrow && redCanShrink)
+        IEnumerator AudioFade(float startVolume, float endVolume, float duration)
         {
-            isGrowing = false;
-            isShrinking = false;
-        }
-        else if (blueCanGrow)
-        {
-            isGrowing = true;
-            isShrinking = false;
-        }
-        else if (redCanShrink)
-        {
-            isGrowing = false;
-            isShrinking = true;
-        }
-        else
-        {
-            isGrowing = false;
-            isShrinking = false;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                audioSource.volume = Mathf.Lerp(startVolume, endVolume, elapsed / duration);
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            audioSource.volume = endVolume;
         }
 
-        HandleGrowth();
+        void Update()
+        {
+            if (bluePlayer == null || redPlayer == null) return;
+
+            PlayerFrequency blueFreq = bluePlayer.GetComponent<PlayerFrequency>();
+            PlayerFrequency redFreq = redPlayer.GetComponent<PlayerFrequency>();
+        if (blueFreq.currentFrequency != lastBlueFreq || redFreq.currentFrequency != lastRedFreq)
+        {
+            Debug.Log($"<color=blue>Blue</color>: {blueFreq.currentFrequency} Hz | <color=red>Red</color>: {redFreq.currentFrequency} Hz");
+            lastBlueFreq = blueFreq.currentFrequency;
+            lastRedFreq = redFreq.currentFrequency;
+        }
+        if (blueFreq == null || redFreq == null) return;
+            HandleGrowth();
+            UpdateInteractionState(blueFreq, redFreq);
+            UpdateAudioFeedback();
+        }
+
+        void UpdateInteractionState(PlayerFrequency blueFreq, PlayerFrequency redFreq)
+        {
+            bool blueCanGrow = blueFreq.isUsingFrequency &&
+                              IsPlayerInRange(bluePlayer) &&
+                              Mathf.Abs(blueFreq.currentFrequency - requiredFrequency) < frequencyTolerance;
+
+            bool redCanShrink = redFreq.isUsingFrequency &&
+                               IsPlayerInRange(redPlayer) &&
+                               Mathf.Abs(redFreq.currentFrequency - requiredFrequency) < frequencyTolerance;
+
+            // Handle state transitions
+            if (blueCanGrow && redCanShrink)
+            {
+                isGrowing = false;
+                isShrinking = false;
+            }
+            else if (blueCanGrow)
+            {
+                isGrowing = true;
+                isShrinking = false;
+            }
+            else if (redCanShrink)
+            {
+                isGrowing = false;
+                isShrinking = true;
+            }
+            else
+            {
+                isGrowing = false;
+                isShrinking = false;
+            }
+        }
+
+        AudioClip GenerateSineWave(float frequency, float duration)
+        {
+            int sampleRate = AudioSettings.outputSampleRate;
+            int sampleCount = Mathf.FloorToInt(sampleRate * duration);
+            float[] samples = new float[sampleCount];
+
+            float increment = frequency * 2f * Mathf.PI / sampleRate;
+            float phase = 0f;
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                samples[i] = Mathf.Sin(phase);
+                phase += increment;
+                if (phase > 2f * Mathf.PI) phase -= 2f * Mathf.PI;
+            }
+
+            AudioClip clip = AudioClip.Create("SineWave_" + frequency + "Hz", sampleCount, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
+        bool IsPlayerInRange(Transform player)
+        {
+            return Vector3.Distance(player.position, transform.position) <= activationRange;
+        }
+
+        void HandleGrowth()
+        {
+            Vector3 targetScale = transform.localScale;
+
+            if (isGrowing)
+            {
+                targetScale = Vector3.MoveTowards(transform.localScale, maxScale, growthSpeed * Time.deltaTime);
+            }
+            else if (isShrinking)
+            {
+                targetScale = Vector3.MoveTowards(transform.localScale, minScale, growthSpeed * Time.deltaTime);
+            }
+
+            if (targetScale != transform.localScale)
+            {
+                float scaleDifference = targetScale.y - transform.localScale.y;
+                transform.localScale = targetScale;
+                transform.position += new Vector3(0, scaleDifference / 2f, 0);
+            }
+        }
+
+        void UpdateAudioFeedback()
+        {
+            // Update target volume based on state
+            targetVolume = (isGrowing || isShrinking) ? emissionVolume * activeVolumeBoost : emissionVolume;
+
+            // Smooth volume transition
+            audioSource.volume = Mathf.SmoothDamp(audioSource.volume, targetVolume, ref volumeVelocity, smoothTime);
+
+            // Calculate target pitch with variation when active
+            float targetPitch = basePitch;
+            if (isGrowing || isShrinking)
+            {
+                targetPitch += Mathf.Sin(Time.time * 2f) * pitchVariation;
+            }
+
+            // Smooth pitch transition
+            currentPitch = Mathf.SmoothDamp(currentPitch, targetPitch, ref pitchVelocity, smoothTime);
+            audioSource.pitch = currentPitch;
+        }
+
+        void OnDestroy()
+        {
+            // Clean up the audio clip to prevent memory leaks
+            if (audioSource != null && audioSource.clip != null)
+            {
+                Destroy(audioSource.clip);
+            }
+        }
     }
-
-    bool IsPlayerInRange(Transform player)
-    {
-        return Vector3.Distance(player.position, transform.position) <= activationRange;
-    }
-
-    void HandleGrowth()
-    {
-        Vector3 targetScale = transform.localScale;
-
-        if (isGrowing && transform.localScale.x < maxScale.x)
-        {
-            targetScale = Vector3.MoveTowards(transform.localScale, maxScale, growthSpeed * Time.deltaTime);
-        }
-        else if (isShrinking && transform.localScale.x > minScale.x)
-        {
-            targetScale = Vector3.MoveTowards(transform.localScale, minScale, growthSpeed * Time.deltaTime);
-        }
-
-        // Calculate growth difference
-        float scaleDifference = targetScale.y - transform.localScale.y;
-
-        // Apply new scale
-        transform.localScale = targetScale;
-
-        // Adjust position to keep the bottom on the ground
-        transform.position += new Vector3(0, scaleDifference / 2f, 0);
-    }
-}
