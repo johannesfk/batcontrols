@@ -12,6 +12,7 @@ public class PlayerController : MonoBehaviour
     public float runAcceleration = 0.25f;
     public float runSpeed = 4f;
     public float drag = 0.1f;
+    public float movingThreshold = 0.01f;
 
     [Header("Gravity & Vertical Velocity")]
     private float _verticalVelocity = 0f;
@@ -25,6 +26,8 @@ public class PlayerController : MonoBehaviour
 
     // Instance to inputs
     private PlayerLocomotionInput _playerLocomotionInput;
+    private PlayerState _playerState;
+
     private Vector2 _cameraRotation = Vector2.zero;
     private Vector2 _playerTargetRotation = Vector2.zero;
 
@@ -44,11 +47,28 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        UpdateMovementState();
+        HandleLateralMovement();
+    }
+
+
+    private void UpdateMovementState()
+    {
+        bool isMovementInput = _playerLocomotionInput.MovementInput != Vector2.zero;
+        bool isMovingLaterally = IsMovingLaterally();
+
+    // Now isMovingLaterally is a boolean, and can be used in the condition
+        PlayerMovementState lateralState = isMovingLaterally || isMovementInput ? PlayerMovementState.Walking : PlayerMovementState.Idling;
+        _playerState.SetPlayerMovementState(lateralState);
+    }
+
+
+    private void HandleLateralMovement()
+    {
         Vector3 cameraForwardXZ = new Vector3(_playerCamera.transform.forward.x, 0f, _playerCamera.transform.forward.z).normalized;
         Vector3 cameraRightXZ = new Vector3(_playerCamera.transform.right.x, 0f, _playerCamera.transform.right.z).normalized;
         Vector3 MovementDirection = cameraRightXZ * _playerLocomotionInput.MovementInput.x + cameraForwardXZ * _playerLocomotionInput.MovementInput.y;
         Debug.Log("Movement Input: " + _playerLocomotionInput.MovementInput);
-
 
         Vector3 movementDelta = MovementDirection * runAcceleration * Time.deltaTime;
         Vector3 newVelocity = _characterController.velocity + movementDelta;
@@ -76,6 +96,7 @@ public class PlayerController : MonoBehaviour
         _characterController.Move(newVelocity * Time.deltaTime);
     }
 
+
     private void LateUpdate()
     {
         // Handle camera rotation
@@ -88,5 +109,11 @@ public class PlayerController : MonoBehaviour
 
         // Update camera rotation
         _playerCamera.transform.rotation = Quaternion.Euler(_cameraRotation.y, _cameraRotation.x, 0f);
+    }
+
+    private bool IsMovingLaterally()
+    {
+        Vector3 lateralVelocity = new Vector3(_characterController.velocity.x, 0f, _characterController.velocity.y);
+        return lateralVelocity.magnitude > movingThreshold;
     }
 }
