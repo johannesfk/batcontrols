@@ -4,6 +4,10 @@ using UnityEngine.InputSystem;
 public class PlayerLocomotionInput : MonoBehaviour, PlayerControls.IPlayerLocomotionMapActions
 {
     // Properties
+    [SerializeField] private bool holdToSprint = true;
+   
+    public bool SprintToggledOn { get; private set; }
+   
     private PlayerControls _playerControls; 
     public Vector2 MovementInput { get; private set; }
     public Vector2 LookInput { get; private set; }
@@ -39,12 +43,23 @@ public class PlayerLocomotionInput : MonoBehaviour, PlayerControls.IPlayerLocomo
 
     // other actions
 
-        public void OnSonar(InputAction.CallbackContext context)
+    public void OnSprintToggle(InputAction.CallbackContext context)
         {
-        
+            if(context.performed)
+            {
+                SprintToggledOn = holdToSprint || !SprintToggledOn;
+            }
+            else if(context.canceled)
+            {
+                SprintToggledOn = !holdToSprint && SprintToggledOn;
+            }
         }
 
-        public void OnSprint(InputAction.CallbackContext context)
+
+
+
+
+        public void OnSonar(InputAction.CallbackContext context)
         {
         
         }
