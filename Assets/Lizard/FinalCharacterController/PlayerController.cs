@@ -15,11 +15,8 @@ public class PlayerController : MonoBehaviour
     public float sprintSpeed = 7f;
     public float drag = 0.1f;
     public float movingThreshold = 0.01f;
-
-    [Header("Gravity & Vertical Velocity")]
-    private float _verticalVelocity = 0f;
-    private float gravity = -9.81f; // Gravity Force
-    
+    public float gravity = -25f; // Gravity Force
+    public float jumpSpeed = 1.0f;   
 
     [Header("Camera Settings")]
     public float lookSenseH = 0.1f;
@@ -32,6 +29,11 @@ public class PlayerController : MonoBehaviour
 
     private Vector2 _cameraRotation = Vector2.zero;
     private Vector2 _playerTargetRotation = Vector2.zero;
+    public float rotationSmoothTime = 0.05f; // Smoothing time
+    private Vector2 _rotationVelocity = Vector2.zero;
+
+
+    private float _verticalVelocity = 0f;   
 
 
     private void Awake()
@@ -55,6 +57,7 @@ public class PlayerController : MonoBehaviour
     private void Update()
     {
         UpdateMovementState();
+        HandleVerticalMovement();
         HandleLateralMovement();
     }
 
@@ -70,6 +73,7 @@ public class PlayerController : MonoBehaviour
         bool isMovementInput = _playerLocomotionInput.MovementInput != Vector2.zero;    // order
         bool isMovingLaterally = IsMovingLaterally();                                   // matter
         bool isSprinting = _playerLocomotionInput.SprintToggledOn && IsMovingLaterally(); // order matters
+        bool isGrounded = IsGrounded();
 
         // Now isMovingLaterally is a boolean, and can be used in the condition
         PlayerMovementState lateralState = isSprinting ? PlayerMovementState.Sprinting :
@@ -77,19 +81,47 @@ public class PlayerController : MonoBehaviour
        
 
         _playerState.SetPlayerMovementState(lateralState);
+
+        // Control Airbon State
+        if(!isGrounded && _characterController.velocity.y >= 0f)
+        {
+            _playerState.SetPlayerMovementState(PlayerMovementState.Jumping);
+        }
+        else if (!isGrounded && _characterController.velocity.y < 0f)
+        {
+            _playerState.SetPlayerMovementState(PlayerMovementState.Falling);
+        }
+
     }
 
+    private void HandleVerticalMovement()
+    {
+        bool isGrounded = _playerState.InGroundedState();
+
+        if(isGrounded && _verticalVelocity < 0)
+            _verticalVelocity = 0f;
+
+        _verticalVelocity -= gravity * Time.deltaTime;
+
+        // Jump logic
+        if(_playerLocomotionInput.JumpPressed && isGrounded)
+        {
+            _verticalVelocity += Mathf.Sqrt(jumpSpeed * -2.0f * gravity);
+        }
+
+        _verticalVelocity += gravity * Time.deltaTime;
+    }
 
     private void HandleLateralMovement()
     {
          // Create quick reference for current state
         bool isSprinting = _playerState.CurrentPlayerMovementState == PlayerMovementState.Sprinting;  // Use == for comparison
+        bool isGrounded = _playerState.InGroundedState();
 
         // State dependent acceleration and speed
         float lateralAcceleration = isSprinting ? sprintAcceleration : runAcceleration;
         float clampLateralMagnitude = isSprinting ? sprintSpeed : runSpeed;
         
-
 
         Vector3 cameraForwardXZ = new Vector3(_playerCamera.transform.forward.x, 0f, _playerCamera.transform.forward.z).normalized;
         Vector3 cameraRightXZ = new Vector3(_playerCamera.transform.right.x, 0f, _playerCamera.transform.right.z).normalized;
@@ -104,6 +136,7 @@ public class PlayerController : MonoBehaviour
         Vector3 currentDrag = newVelocity.normalized * drag * Time.deltaTime;
         newVelocity = (newVelocity.magnitude > drag * Time.deltaTime) ? newVelocity - currentDrag : Vector3.zero;
         newVelocity = Vector3.ClampMagnitude(newVelocity, clampLateralMagnitude);
+        newVelocity.y += _verticalVelocity;
 
         // Apply gravity to vertical velocity (Y-axis)
         if (!_characterController.isGrounded)
@@ -125,22 +158,31 @@ public class PlayerController : MonoBehaviour
 
     private void LateUpdate()
     {
-        // Handle camera rotation
+        // Get input from mouse
         _cameraRotation.x += lookSenseH * _playerLocomotionInput.LookInput.x;
-        _cameraRotation.y = Mathf.Clamp(_cameraRotation.y - lookSenseV * _playerLocomotionInput.LookInput.y, -lookLimitV, lookLimitV);
+        _cameraRotation.y -= lookSenseV * _playerLocomotionInput.LookInput.y;
+        _cameraRotation.y = Mathf.Clamp(_cameraRotation.y, -lookLimitV, lookLimitV);
 
-        // Rotate the player (on the y-axis only)
-        _playerTargetRotation.x += transform.eulerAngles.x + lookSenseH * _playerLocomotionInput.LookInput.x;
-        transform.rotation = Quaternion.Euler(0f, _playerTargetRotation.x, 0f);
+        // Making the Smooth rotation
+        _rotationVelocity = Vector2.Lerp(_rotationVelocity, _cameraRotation, rotationSmoothTime);
+    
+        // Rotate player (left/right)
+        transform.rotation = Quaternion.Euler(0f, _rotationVelocity.x, 0f);
 
-        // Update camera rotation
-        _playerCamera.transform.localRotation = Quaternion.Euler(_cameraRotation.y, _cameraRotation.x, 0f);
+        // Rotate camera (up/down)
+        _playerCamera.transform.localRotation = Quaternion.Euler(_rotationVelocity.y, 0f, 0f);
        
     }
 
     private bool IsMovingLaterally()
     {
-        Vector3 lateralVelocity = new Vector3(_characterController.velocity.x, 0f, _characterController.velocity.y);
+        Vector3 lateralVelocity = new Vector3(_characterController.velocity.x, 0f, _characterController.velocity.z);
+        
         return lateralVelocity.magnitude > movingThreshold;
+    }
+
+    private bool IsGrounded()
+    {
+        return _characterController.isGrounded;
     }
 }
