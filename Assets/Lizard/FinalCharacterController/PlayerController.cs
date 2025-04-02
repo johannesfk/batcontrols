@@ -61,7 +61,7 @@ public class PlayerController : MonoBehaviour
         HandleLateralMovement();
     }
 
-
+    // --- Updating the state of the Movement ---
     private void UpdateMovementState()
     {    
         if (_playerLocomotionInput == null || _playerState == null)
@@ -83,7 +83,7 @@ public class PlayerController : MonoBehaviour
         _playerState.SetPlayerMovementState(lateralState);
 
         // Control Airbon State
-        if(!isGrounded && _characterController.velocity.y >= 0f)
+        if (_playerLocomotionInput.JumpPressed && isGrounded)
         {
             _playerState.SetPlayerMovementState(PlayerMovementState.Jumping);
         }
@@ -91,9 +91,10 @@ public class PlayerController : MonoBehaviour
         {
             _playerState.SetPlayerMovementState(PlayerMovementState.Falling);
         }
-
     }
 
+
+    // --- Handling the vertical movement on the controller ---
     private void HandleVerticalMovement()
     {
         bool isGrounded = _playerState.InGroundedState();
@@ -125,7 +126,6 @@ public class PlayerController : MonoBehaviour
 
         Vector3 cameraForwardXZ = new Vector3(_playerCamera.transform.forward.x, 0f, _playerCamera.transform.forward.z).normalized;
         Vector3 cameraRightXZ = new Vector3(_playerCamera.transform.right.x, 0f, _playerCamera.transform.right.z).normalized;
-
         Vector3 MovementDirection = cameraRightXZ * _playerLocomotionInput.MovementInput.x + cameraForwardXZ * _playerLocomotionInput.MovementInput.y;
         Debug.Log("Movement Input: " + _playerLocomotionInput.MovementInput);
 
