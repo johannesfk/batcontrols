@@ -140,20 +140,26 @@ public class PlayerController : MonoBehaviour
 
     private void HandleLateralMovement()
     {
-         // Create quick reference for current state
-        bool isSprinting = _playerState.CurrentPlayerMovementState == PlayerMovementState.Sprinting;  // Use == for comparison
+            // Create quick reference for current state
+        bool isSprinting = _playerState.CurrentPlayerMovementState == PlayerMovementState.Sprinting;
         bool isGrounded = _playerState.InGroundedState();
 
         // State dependent acceleration and speed
         float lateralAcceleration = isSprinting ? sprintAcceleration : runAcceleration;
         float clampLateralMagnitude = isSprinting ? sprintSpeed : runSpeed;
-        
 
+        // Use input-based movement even if camera isn't rotating
         Vector3 cameraForwardXZ = new Vector3(_playerCamera.transform.forward.x, 0f, _playerCamera.transform.forward.z).normalized;
         Vector3 cameraRightXZ = new Vector3(_playerCamera.transform.right.x, 0f, _playerCamera.transform.right.z).normalized;
-        Vector3 MovementDirection = cameraRightXZ * _playerLocomotionInput.MovementInput.x + cameraForwardXZ * _playerLocomotionInput.MovementInput.y;
-        Debug.Log("Movement Input: " + _playerLocomotionInput.MovementInput);
 
+        // If there's movement input, use it to determine direction
+        Vector3 MovementDirection = Vector3.zero;
+        if (_playerLocomotionInput.MovementInput != Vector2.zero)
+        {
+            MovementDirection = cameraRightXZ * _playerLocomotionInput.MovementInput.x + cameraForwardXZ * _playerLocomotionInput.MovementInput.y;
+        }
+
+        // Apply movement input direction to velocity
         Vector3 movementDelta = MovementDirection * lateralAcceleration;
         Vector3 newVelocity = _characterController.velocity + movementDelta;
 
@@ -176,7 +182,7 @@ public class PlayerController : MonoBehaviour
         // Add vertical velocity to the movement (Y-axis)
         newVelocity.y = _verticalVelocity;
 
-        // Move character (Unity suggests only calling this once per tick, or shit get wonky) 
+        // Move character
         _characterController.Move(newVelocity * Time.deltaTime);
     }
 
