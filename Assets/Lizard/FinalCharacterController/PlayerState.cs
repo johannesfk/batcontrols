@@ -17,8 +17,6 @@ public class PlayerState : MonoBehaviour
     }   
 }
 
-
-
 public enum PlayerMovementState
     {
         Idling = 0,

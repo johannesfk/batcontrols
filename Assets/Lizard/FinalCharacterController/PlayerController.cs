@@ -16,7 +16,10 @@ public class PlayerController : MonoBehaviour
     public float drag = 0.1f;
     public float movingThreshold = 0.01f;
     public float gravity = -25f; // Gravity Force
-    public float jumpSpeed = 1.0f;   
+    public float jumpSpeed = 1.0f;
+    public float jumpCooldown = 0.1f; // Small delay before jumping again
+    public float coyoteTime = 0.2f; // Allow jumping for 0.2 seconds after falling
+   
 
     [Header("Camera Settings")]
     public float lookSenseH = 0.1f;
@@ -34,6 +37,8 @@ public class PlayerController : MonoBehaviour
 
 
     private float _verticalVelocity = 0f;   
+    private float lastTimeGrounded;
+    private float _jumpCooldownCounter = 0f;
 
 
     private void Awake()
@@ -75,7 +80,14 @@ public class PlayerController : MonoBehaviour
         bool isSprinting = _playerLocomotionInput.SprintToggledOn && IsMovingLaterally(); // order matters
         bool isGrounded = IsGrounded();
 
+        // Track the last time player was grounded for coyote time (essentially we're adding a buffer here)
+        if (isGrounded)
+        {
+            lastTimeGrounded = Time.time;
+        }
+
         // Now isMovingLaterally is a boolean, and can be used in the condition
+        // Determines lateral movement state!
         PlayerMovementState lateralState = isSprinting ? PlayerMovementState.Sprinting :
                     isMovingLaterally || isMovementInput ? PlayerMovementState.Walking : PlayerMovementState.Idling;
        
@@ -99,18 +111,31 @@ public class PlayerController : MonoBehaviour
     {
         bool isGrounded = _playerState.InGroundedState();
 
-        if(isGrounded && _verticalVelocity < 0)
-            _verticalVelocity = 0f;
-
-        _verticalVelocity -= gravity * Time.deltaTime;
-
-        // Jump logic
-        if(_playerLocomotionInput.JumpPressed && isGrounded)
+        // Reset velocity when grounded
+        if (isGrounded && _verticalVelocity < 0)
         {
-            _verticalVelocity += Mathf.Sqrt(jumpSpeed * -2.0f * gravity);
+            _verticalVelocity = 0f;
+        }
+
+        // Reduce jump cooldown timer
+        if (_jumpCooldownCounter > 0)
+        {
+            _jumpCooldownCounter -= Time.deltaTime;
         }
 
         _verticalVelocity += gravity * Time.deltaTime;
+
+        // Jump logic - Now considers coyote time and jump cooldown
+        bool canJump = _playerLocomotionInput.JumpPressed &&
+                       (isGrounded || (Time.time - lastTimeGrounded <= coyoteTime)) &&
+                       _jumpCooldownCounter <= 0;
+
+        if (canJump)
+        {
+            // Jump immediately when pressed
+            _verticalVelocity = Mathf.Sqrt(jumpSpeed * -2.0f * gravity);
+            _jumpCooldownCounter = jumpCooldown; // Apply cooldown
+        }
     }
 
     private void HandleLateralMovement()
