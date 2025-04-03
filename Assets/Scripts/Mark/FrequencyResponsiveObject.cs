@@ -45,8 +45,11 @@ public class FrequencyResponsiveObject : MonoBehaviour
     private Bug bugScript; // Reference to the Bug script
     void Start()
     {
+        // Check if this object has a Bug component and store reference
+        bugScript = GetComponent<Bug>();
+
         audioSource = GetComponent<AudioSource>();
-        InitializeAudio();
+        InitializeAudio();  
     }
 
     // ===== INITIALIZE AUDIO SETTINGS =====
@@ -187,15 +190,10 @@ public class FrequencyResponsiveObject : MonoBehaviour
             transform.localScale = targetScale;
             transform.position += new Vector3(0, scaleDifference / 2f, 0);
         }
-
-        // Check if the object has reached max scale and update the Bug script
-        if (transform.localScale == maxScale)
+        // If this object has a Bug script, update its isBig value
+        if (bugScript != null)
         {
-            bugScript.isBig = true;
-        }
-        else
-        {
-            bugScript.isBig = false;
+            bugScript.isBig = (transform.localScale == maxScale);
         }
     }
 
