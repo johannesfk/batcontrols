@@ -36,8 +36,8 @@ public class PlayerAnimation : MonoBehaviour
         Vector2 inputTarget = isSprinting ? _playerLocomotionInput.MovementInput * 1.5f : _playerLocomotionInput.MovementInput;
         _currentBlendInput = Vector3.Lerp(_currentBlendInput, inputTarget, locomotionBlendSpeed * Time.deltaTime);
 
-        _animator.SetFloat(inputXHash, inputTarget.x);
-        _animator.SetFloat(inputYHash, inputTarget.y);
-        _animator.SetFloat(inputMagnitudeHash, _currentBlendInput.magnitude);
+     //   _animator.SetFloat(inputXHash, inputTarget.x);      
+     //   _animator.SetFloat(inputYHash, inputTarget.y);
+     //  _animator.SetFloat(inputMagnitudeHash, _currentBlendInput.magnitude);
     }
 }

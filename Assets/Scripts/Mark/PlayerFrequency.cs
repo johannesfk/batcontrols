@@ -89,12 +89,12 @@ public class PlayerFrequency : MonoBehaviour
     {
         if (isBluePlayer)
         {
-            // If the player is blue, they use W/S keys to adjust frequency
-            if (Input.GetKey(KeyCode.W))
+            // If the player is blue, they use 1/2 keys to adjust frequency
+            if (Input.GetKey(KeyCode.Alpha1))
             {
                 currentFrequency += frequencyStep * Time.deltaTime * frequencyStep; // Increase frequency
             }
-            else if (Input.GetKey(KeyCode.S))
+            else if (Input.GetKey(KeyCode.Alpha2))
             {
                 currentFrequency -= frequencyStep * Time.deltaTime * frequencyStep; // Decrease frequency
             }
