@@ -30,7 +30,7 @@ public class ObjectPickup : MonoBehaviour
 
         foreach (Collider col in objectsInRange)
         {
-            if (col.CompareTag("Pickable"))
+            if (col.CompareTag("Bug"))
             {
                 nearestObject = col.gameObject;
                 break;  // Only pick the closest object
