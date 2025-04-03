@@ -380,13 +380,12 @@ MonoBehaviour:
   drag: 20
   movingThreshold: 0.01
   gravity: -25
-  jumpSpeed: 1
+  jumpSpeed: 8
   jumpCooldown: 0.1
-  coyoteTime: 0.2
+  coyoteTime: 0.1
   lookSenseH: 0.1
   lookSenseV: 0.1
   lookLimitV: 70
-  rotationSmoothTime: 0.05
 --- !u!54 &2359478159171680019
 Rigidbody:
   m_ObjectHideFlags: 0
