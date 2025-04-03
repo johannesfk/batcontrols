@@ -16,7 +16,10 @@ public class PlayerController : MonoBehaviour
     public float drag = 0.1f;
     public float movingThreshold = 0.01f;
     public float gravity = -25f; // Gravity Force
-    public float jumpSpeed = 1.0f;   
+    public float jumpSpeed = 1.0f;
+    public float jumpCooldown = 0.1f; // Small delay before jumping again
+    public float coyoteTime = 0.2f; // Allow jumping for 0.2 seconds after falling
+   
 
     [Header("Camera Settings")]
     public float lookSenseH = 0.1f;
@@ -34,6 +37,8 @@ public class PlayerController : MonoBehaviour
 
 
     private float _verticalVelocity = 0f;   
+    private float lastTimeGrounded;
+    private float _jumpCooldownCounter = 0f;
 
 
     private void Awake()
@@ -75,7 +80,14 @@ public class PlayerController : MonoBehaviour
         bool isSprinting = _playerLocomotionInput.SprintToggledOn && IsMovingLaterally(); // order matters
         bool isGrounded = IsGrounded();
 
+        // Track the last time player was grounded for coyote time (essentially we're adding a buffer here)
+        if (isGrounded)
+        {
+            lastTimeGrounded = Time.time;
+        }
+
         // Now isMovingLaterally is a boolean, and can be used in the condition
+        // Determines lateral movement state!
         PlayerMovementState lateralState = isSprinting ? PlayerMovementState.Sprinting :
                     isMovingLaterally || isMovementInput ? PlayerMovementState.Walking : PlayerMovementState.Idling;
        
@@ -99,36 +111,55 @@ public class PlayerController : MonoBehaviour
     {
         bool isGrounded = _playerState.InGroundedState();
 
-        if(isGrounded && _verticalVelocity < 0)
-            _verticalVelocity = 0f;
-
-        _verticalVelocity -= gravity * Time.deltaTime;
-
-        // Jump logic
-        if(_playerLocomotionInput.JumpPressed && isGrounded)
+        // Reset velocity when grounded
+        if (isGrounded && _verticalVelocity < 0)
         {
-            _verticalVelocity += Mathf.Sqrt(jumpSpeed * -2.0f * gravity);
+            _verticalVelocity = 0f;
+        }
+
+        // Reduce jump cooldown timer
+        if (_jumpCooldownCounter > 0)
+        {
+            _jumpCooldownCounter -= Time.deltaTime;
         }
 
         _verticalVelocity += gravity * Time.deltaTime;
+
+        // Jump logic - Now considers coyote time and jump cooldown
+        bool canJump = _playerLocomotionInput.JumpPressed &&
+                       (isGrounded || (Time.time - lastTimeGrounded <= coyoteTime)) &&
+                       _jumpCooldownCounter <= 0;
+
+        if (canJump)
+        {
+            // Jump immediately when pressed
+            _verticalVelocity = Mathf.Sqrt(jumpSpeed * -2.0f * gravity);
+            _jumpCooldownCounter = jumpCooldown; // Apply cooldown
+        }
     }
 
     private void HandleLateralMovement()
     {
-         // Create quick reference for current state
-        bool isSprinting = _playerState.CurrentPlayerMovementState == PlayerMovementState.Sprinting;  // Use == for comparison
+            // Create quick reference for current state
+        bool isSprinting = _playerState.CurrentPlayerMovementState == PlayerMovementState.Sprinting;
         bool isGrounded = _playerState.InGroundedState();
 
         // State dependent acceleration and speed
         float lateralAcceleration = isSprinting ? sprintAcceleration : runAcceleration;
         float clampLateralMagnitude = isSprinting ? sprintSpeed : runSpeed;
-        
 
+        // Use input-based movement even if camera isn't rotating
         Vector3 cameraForwardXZ = new Vector3(_playerCamera.transform.forward.x, 0f, _playerCamera.transform.forward.z).normalized;
         Vector3 cameraRightXZ = new Vector3(_playerCamera.transform.right.x, 0f, _playerCamera.transform.right.z).normalized;
-        Vector3 MovementDirection = cameraRightXZ * _playerLocomotionInput.MovementInput.x + cameraForwardXZ * _playerLocomotionInput.MovementInput.y;
-        Debug.Log("Movement Input: " + _playerLocomotionInput.MovementInput);
 
+        // If there's movement input, use it to determine direction
+        Vector3 MovementDirection = Vector3.zero;
+        if (_playerLocomotionInput.MovementInput != Vector2.zero)
+        {
+            MovementDirection = cameraRightXZ * _playerLocomotionInput.MovementInput.x + cameraForwardXZ * _playerLocomotionInput.MovementInput.y;
+        }
+
+        // Apply movement input direction to velocity
         Vector3 movementDelta = MovementDirection * lateralAcceleration;
         Vector3 newVelocity = _characterController.velocity + movementDelta;
 
@@ -151,7 +182,7 @@ public class PlayerController : MonoBehaviour
         // Add vertical velocity to the movement (Y-axis)
         newVelocity.y = _verticalVelocity;
 
-        // Move character (Unity suggests only calling this once per tick, or shit get wonky) 
+        // Move character
         _characterController.Move(newVelocity * Time.deltaTime);
     }
 
