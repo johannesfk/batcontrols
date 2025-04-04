@@ -90,6 +90,7 @@ public class PlayerFrequency : MonoBehaviour
         if (isBluePlayer)
         {
             // If the player is blue, they use 1/2 keys to adjust frequency
+            /*
             if (Input.GetKey(KeyCode.Alpha1))
             {
                 currentFrequency += frequencyStep * Time.deltaTime * frequencyStep; // Increase frequency
@@ -97,6 +98,16 @@ public class PlayerFrequency : MonoBehaviour
             else if (Input.GetKey(KeyCode.Alpha2))
             {
                 currentFrequency -= frequencyStep * Time.deltaTime * frequencyStep; // Decrease frequency
+            }
+            */
+
+            // If the player is blue, they use mouse scroll to adjust frequency 
+            float scrollInput = Input.mouseScrollDelta.y; // Get scroll input
+
+            if (isUsingFrequency && scrollInput != 0)
+            {
+                currentFrequency += scrollInput * frequencyStep; // Adjust sensitivity as needed
+                currentFrequency = Mathf.Clamp(currentFrequency, frequencyRangeMin, frequencyRangeMax);
             }
         }
         else
